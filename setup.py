@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from toxmailorg import __version__
 
 
-install_requires = ['dnslib', 'PyNaCl']
+install_requires = ['dnslib', 'PyNaCl', 'sqlalchemy']
 dependency_links = []
 
 try:

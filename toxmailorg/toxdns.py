@@ -10,7 +10,11 @@ import json
 import pwd
 import grp
 
+
+from sqlalchemy import and_
 from toxmailorg import cryptocore
+from toxmailorg.database import User, Domain, get_session, DEFAULT_DB
+
 
 ch_A = ord("A")
 ch_Z = ord("Z")
@@ -80,12 +84,11 @@ def notsecure32_encode(src):
 class ToxResolver(dnslib.server.BaseResolver):
     def __init__(self, cryptocore, cfg):
         self.home = cfg["hostname"].encode("utf8")
+        self.db = get_session(sqluri=cfg.get('sqluri', DEFAULT_DB))
         self.cryptocore = cryptocore
         self.ttl = cfg["dns_record_ttl"]
-        with open("names.json", "r") as namelist_f:
-            self.names = json.load(namelist_f)
-
-        self.workable_domains = set(k.split("@")[1] for k in self.names)
+        self.workable_domains = [domain.name for domain
+                                 in self.db.query(Domain)]
 
     def resolve(self, request, handler):
         question = request.get_q()
@@ -144,11 +147,14 @@ class ToxResolver(dnslib.server.BaseResolver):
         except UnicodeDecodeError:
             return None
 
-        toxid = self.names.get("{0}@{1}".format(dec_name, domain))
-        if not toxid:
+        query = self.db.query(User).filter(and_(User.name == name,
+                                                User.domain == domain))
+        user = query.one()
+
+        if not user:
             return None
 
-        msg = binascii.unhexlify(toxid)
+        msg = binascii.unhexlify(user.toxid)
         nonce_reply = b[:4] + b"\x01" + (b"\0" * 19)
         ct = self.cryptocore.dsrec_encrypt_key(ck, nonce_reply, msg)
         key_part = notsecure32_encode(ct).decode("ascii")
@@ -159,12 +165,16 @@ class ToxResolver(dnslib.server.BaseResolver):
         return reply
 
     def try_tox1_resolve(self, reply, name, domain, req_name):
-        toxid = self.names.get("{0}@{1}".format(name, domain))
-        if not toxid:
+        query = self.db.query(User).filter(and_(User.name == name,
+                                                User.domain == domain))
+
+        user = query.one()
+
+        if not user:
             reply.header.rcode = dnslib.RCODE.NXDOMAIN
             return reply
         else:
-            rec = "v=tox1;id={0}".format(toxid).encode("utf8")
+            rec = "v=tox1;id={0}".format(user.toxid).encode("utf8")
             reply.add_answer(dnslib.RR(req_name, 16, ttl=self.ttl,
                                        rdata=dnslib.TXT(rec)))
             return reply
