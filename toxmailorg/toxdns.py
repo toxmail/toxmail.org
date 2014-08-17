@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2014 Zodiac Labs. All rights reserved.
+# adapted from https://github.com/Tox/Tox-QuickDNS - (c) 2014 Zodiac Labs.
 import dnslib.server
 import dnslib
 import binascii
