@@ -2,7 +2,6 @@
 # Copyright (c) 2014 Zodiac Labs. All rights reserved.
 import dnslib.server
 import dnslib
-import time
 import binascii
 import os
 import sys
@@ -25,6 +24,7 @@ ir2 = lambda c: c <= ch_z and c >= ch_a
 ir3 = lambda c: c <= ch_FIVE and c >= ch_ZERO
 BASE32_SRC = b"abcdefghijklmnopqrstuvwxyz012345"
 
+
 # q: why not use python's base64 module?
 # a: <+irungentoo> notsecure, I told you we should have used standard base32
 #    <notsecure> Jfreegman, irungentoo wanted to use a-z,2-7 for base32,
@@ -45,15 +45,16 @@ def notsecure32_decode(src):
         else:
             raise ValueError("this is an error apparently")
 
-        op = (op | (char << bits)) % 256;
-        bits += 5;
+        op = (op | (char << bits)) % 256
+        bits += 5
 
         if bits >= 8:
             bits -= 8
             ret.append(op)
-            op = (char >> (5 - bits)) % 256;
+            op = (char >> (5 - bits)) % 256
 
     return bytes(ret)
+
 
 # TODO optimize
 def notsecure32_encode(src):
@@ -74,6 +75,7 @@ def notsecure32_encode(src):
             bits -= 8
             i += 1
     return bytes(ret)
+
 
 class ToxResolver(dnslib.server.BaseResolver):
     def __init__(self, cryptocore, cfg):
@@ -102,8 +104,10 @@ class ToxResolver(dnslib.server.BaseResolver):
 
         if question.qtype == 16:
             if not name and domain in self.workable_domains:
+                data = self.cryptocore.public_key.encode("ascii")
+
                 reply.add_answer(dnslib.RR(req_name, 16, ttl=0,
-                    rdata=dnslib.TXT(self.cryptocore.public_key.encode("ascii"))))
+                                           rdata=dnslib.TXT(data)))
                 return reply
 
             first_try = self.try_tox3_resolve(reply, name, domain, req_name)
@@ -165,12 +169,14 @@ class ToxResolver(dnslib.server.BaseResolver):
                                        rdata=dnslib.TXT(rec)))
             return reply
 
+
 def make_server(cryptocore, cfg):
     return dnslib.server.DNSServer(ToxResolver(cryptocore, cfg),
                                    port=cfg["dns_listen_port"],
                                    address=cfg["dns_listen_addr"],
                                    logger=None,
                                    tcp=False)
+
 
 def main():
     with open("config.json", "r") as config_file:
@@ -205,9 +211,10 @@ def main():
                 print("error: we're not root. Exiting.")
                 sys.exit()
         server.start()
+    except KeyboardInterrupt:
+        pass
     finally:
         os.remove(cfg["pid_file"])
 
 if __name__ == "__main__":
     main()
-

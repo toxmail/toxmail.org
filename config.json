@@ -1,7 +1,7 @@
 {
     "pid_file": "pidfile.dl", 
     "dns_record_ttl": 60, 
-    "hostname": "some.domain.example.com", 
+    "hostname": "toxmail.org", 
     "dns_listen_addr": "",
     "dns_listen_port": 53,
     "suid": "tarek:nogroup" 
